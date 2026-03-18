@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
   }
 
   async function nearby(lat, lng, rad, types) {
-    const body = { includedTypes: types, maxResultCount: 20, locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: rad } } };
+    const body = { includedTypes: types, languageCode: 'ko', maxResultCount: 20, locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: rad } } };
     const r = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': KEY, 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.primaryType,places.types,places.priceLevel,places.regularOpeningHours' },
@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
   }
 
   async function textSearch(query) {
-    const body = { textQuery: query, locationBias: { circle: { center: { latitude: 37.5445, longitude: 127.056 }, radius: 3000 } }, maxResultCount: 20 };
+    const body = { languageCode: 'ko', textQuery: query, locationBias: { circle: { center: { latitude: 37.5445, longitude: 127.056 }, radius: 3000 } }, maxResultCount: 20 };
     const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': KEY, 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.primaryType,places.types,places.priceLevel,places.regularOpeningHours' },
