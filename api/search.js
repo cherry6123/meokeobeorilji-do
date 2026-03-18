@@ -76,17 +76,4 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ error: error.message, places: [], count: 0 });
   }
 };
-```
 
-→ **Commit changes**
-
-### 파일 2: `src/App.jsx` — 한 줄 수정
-
-GitHub → `src` 폴더 → `App.jsx` → 연필(Edit) → **Ctrl+F** 누르고:
-```
-const live=apiPlaces.length>0?apiPlaces:D;
-```
-
-찾으면 이걸로 바꾸기:
-```
-const live=apiPlaces;
