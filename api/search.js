@@ -3,78 +3,75 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET');
   
   const KAKAO_KEY = process.env.KAKAO_REST_API_KEY;
-  if (!KAKAO_KEY) {
-    return res.status(200).json({ error: 'KEY not set', places: [], count: 0 });
+  if (!KAKAO_KEY) return res.status(200).json({ places: [], count: 0 });
+
+  const seen = new Set();
+  const results = [];
+
+  function parse(doc) {
+    if (seen.has(doc.id)) return;
+    seen.add(doc.id);
+    const c = doc.category_name || '', cg = doc.category_group_name || '';
+    let g = '기타', ct = 'restaurant';
+    if (cg === '카페') { g = '카페'; ct = 'cafe'; }
+    else if (c.includes('베이커리') || c.includes('제과')) { g = '베이커리'; ct = 'bakery'; }
+    else if (c.includes('술집') || c.includes('바') || c.includes('호프') || c.includes('이자카야')) { g = '바'; ct = 'bar'; }
+    else if (c.includes('한식')) g = '한식';
+    else if (c.includes('일식') || c.includes('일본식')) g = '일식';
+    else if (c.includes('중식') || c.includes('중국')) g = '중식';
+    else if (c.includes('양식') || c.includes('이탈리') || c.includes('프랑스')) g = '양식';
+    else if (c.includes('분식')) g = '분식';
+    else if (c.includes('퓨전')) g = '퓨전';
+    else if (c.includes('동남아') || c.includes('베트남') || c.includes('태국')) g = '동남아';
+    else if (c.includes('멕시')) g = '멕시칸';
+    else if (c.includes('버거')) g = '버거';
+    else if (c.includes('돈까스') || c.includes('돈카츠')) g = '돈까스';
+    else if (cg === '음식점') g = '한식';
+    results.push({
+      id:'k'+doc.id, nk:doc.place_name, g, sg:c.split('>').pop().trim(),
+      rn:0,rg:0,rk:0,rv:0,
+      ad:(doc.road_address_name||doc.address_name||'').replace('서울 성동구 ','').replace('서울특별시 성동구 ',''),
+      ph:doc.phone||'', lt:+doc.y, ln:+doc.x,
+      hr:'',avg:0,mo:[],wt:['맑음','흐림'],
+      ds:c,wa:'정보없음',ig:null,ct,
+      added:new Date().toISOString().slice(0,7),
+      kakaoUrl:doc.place_url,
+      dist:doc.distance?+doc.distance:null
+    });
   }
 
-  const results = [];
-  const seen = new Set();
-
-  async function fetchCat(code, lat, lng, radius) {
-    for (let page = 1; page <= 15; page++) {
-      const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&y=${lat}&x=${lng}&radius=${radius}&size=15&page=${page}&sort=distance`;
-      const r = await fetch(url, { headers: { 'Authorization': `KakaoAK ${KAKAO_KEY}` } });
+  async function fetchAll(code, lat, lng, rad) {
+    const docs = [];
+    for (let p = 1; p <= 45; p++) {
+      const r = await fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&y=${lat}&x=${lng}&radius=${rad}&size=15&page=${p}&sort=distance`,
+        { headers: { 'Authorization': `KakaoAK ${KAKAO_KEY}` } });
       if (!r.ok) break;
-      const data = await r.json();
-      if (!data.documents || data.documents.length === 0) break;
-
-      for (const doc of data.documents) {
-        if (seen.has(doc.id)) continue;
-        seen.add(doc.id);
-
-        const catName = doc.category_name || '';
-        const catGroup = doc.category_group_name || '';
-        let genre = '기타', ct = 'restaurant';
-
-        if (catGroup === '카페') { genre = '카페'; ct = 'cafe'; }
-        else if (catName.includes('베이커리') || catName.includes('제과')) { genre = '베이커리'; ct = 'bakery'; }
-        else if (catName.includes('술집') || catName.includes('바') || catName.includes('호프') || catName.includes('이자카야')) { genre = '바'; ct = 'bar'; }
-        else if (catName.includes('한식')) genre = '한식';
-        else if (catName.includes('일식') || catName.includes('일본식')) genre = '일식';
-        else if (catName.includes('중식') || catName.includes('중국')) genre = '중식';
-        else if (catName.includes('양식') || catName.includes('이탈리') || catName.includes('프랑스')) genre = '양식';
-        else if (catName.includes('분식')) genre = '분식';
-        else if (catName.includes('퓨전')) genre = '퓨전';
-        else if (catName.includes('동남아') || catName.includes('베트남') || catName.includes('태국')) genre = '동남아';
-        else if (catName.includes('멕시')) genre = '멕시칸';
-        else if (catName.includes('버거')) genre = '버거';
-        else if (catName.includes('돈까스') || catName.includes('돈카츠')) genre = '돈까스';
-        else if (catGroup === '음식점') genre = '한식';
-
-        results.push({
-          id: 'k' + doc.id, nk: doc.place_name, g: genre,
-          sg: catName.split('>').pop().trim(),
-          rn: 0, rg: 0, rk: 0, rv: 0,
-          ad: (doc.road_address_name || doc.address_name || '').replace('서울 성동구 ', '').replace('서울특별시 성동구 ', ''),
-          ph: doc.phone || '', lt: +doc.y, ln: +doc.x,
-          hr: '', avg: 0, mo: [], wt: ['맑음', '흐림'],
-          ds: catName, wa: '정보없음', ig: null, ct: ct,
-          added: new Date().toISOString().slice(0, 7),
-          kakaoUrl: doc.place_url,
-          dist: doc.distance ? +doc.distance : null
-        });
-      }
-      if (data.meta && data.meta.is_end) break;
+      const d = await r.json();
+      if (!d.documents || !d.documents.length) break;
+      d.documents.forEach(doc => docs.push(doc));
+      if (d.meta && d.meta.is_end) break;
     }
+    return docs;
   }
 
   try {
     const zones = [
-      [37.5445, 127.0500, 800],
-      [37.5445, 127.0600, 800],
-      [37.5500, 127.0500, 800],
-      [37.5500, 127.0600, 800],
-      [37.5400, 127.0500, 800],
-      [37.5400, 127.0600, 800],
+      [37.5420, 127.0480, 600],[37.5420, 127.0560, 600],[37.5420, 127.0640, 600],
+      [37.5460, 127.0480, 600],[37.5460, 127.0560, 600],[37.5460, 127.0640, 600],
+      [37.5500, 127.0480, 600],[37.5500, 127.0560, 600],[37.5500, 127.0640, 600],
     ];
 
+    const jobs = [];
     for (const [lat, lng, rad] of zones) {
-      await fetchCat('FD6', lat, lng, rad);
-      await fetchCat('CE7', lat, lng, rad);
+      jobs.push(fetchAll('FD6', lat, lng, rad));
+      jobs.push(fetchAll('CE7', lat, lng, rad));
     }
 
+    const allResults = await Promise.all(jobs);
+    allResults.forEach(docs => docs.forEach(parse));
+
     res.status(200).json({ places: results, count: results.length });
-  } catch (error) {
-    res.status(200).json({ error: error.message, places: results, count: results.length });
+  } catch (e) {
+    res.status(200).json({ error: e.message, places: results, count: results.length });
   }
 };
