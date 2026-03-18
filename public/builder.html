@@ -1,93 +1,79 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>데이터 빌더 (Google)</title></head>
+<head><meta charset="utf-8"><title>데이터 빌더</title></head>
 <body style="font-family:system-ui;background:#1C1410;color:#FFF8F0;display:flex;flex-direction:column;align-items:center;min-height:100vh;margin:0;gap:12px;padding:20px">
 <div style="font-size:48px">🍴</div>
 <h1 style="margin:0;font-size:22px">먹어버릴지도 데이터 빌더</h1>
-<p style="color:#5DAA68;font-size:13px;margin:0">Google Places API (평점/리뷰/영업시간 포함)</p>
+<p style="color:#5DAA68;font-size:12px;margin:0">Google Places API · 평점/리뷰/영업시간 포함</p>
 
-<button id="btn1" onclick="buildBase()" style="margin-top:12px;background:linear-gradient(135deg,#4285F4,#34A853);border:none;border-radius:14px;padding:16px 40px;color:#fff;font-size:16px;font-weight:800;cursor:pointer">📥 Step 1: 구글 데이터 다운로드</button>
+<button id="btn1" onclick="buildAll()" style="margin-top:12px;background:linear-gradient(135deg,#4285F4,#34A853);border:none;border-radius:14px;padding:16px 40px;color:#fff;font-size:16px;font-weight:800;cursor:pointer">📥 Step 1: 전체 데이터 빌드 (10파트)</button>
+<div id="prog" style="width:100%;max-width:500px;background:#120E0A;border-radius:8px;height:24px;overflow:hidden;display:none"><div id="bar" style="height:100%;background:linear-gradient(90deg,#4285F4,#34A853);width:0%;transition:width 0.3s;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff"></div></div>
 <div id="r1"></div>
 
-<div style="margin-top:20px;border-top:1px solid #3D3028;padding-top:20px;width:100%;max-width:500px">
-<h3 style="margin:0 0 8px">🔍 Step 2: 빠진 가게 추가</h3>
-<p style="color:#6B5744;font-size:11px;margin:0 0 8px">한 줄에 가게 이름 하나씩 (성수 붙여서)</p>
-<textarea id="names" rows="6" style="width:100%;background:#120E0A;border:1px solid #3D3028;border-radius:10px;padding:10px;color:#FFF8F0;font-size:13px;box-sizing:border-box" placeholder="바오젠 성수&#10;돈골약방 성수&#10;생강김밥 성수&#10;석암생소금구이 성수&#10;필리필리 성수&#10;에르제 성수"></textarea>
-<button id="btn2" onclick="buildExtra()" style="margin-top:8px;width:100%;background:linear-gradient(135deg,#5DAA68,#7BC88A);border:none;border-radius:12px;padding:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer">🔍 이름으로 검색 추가</button>
+<div style="margin-top:16px;border-top:1px solid #3D3028;padding-top:16px;width:100%;max-width:500px">
+<h3 style="margin:0 0 8px;font-size:15px">🔍 Step 2: 빠진 가게 추가</h3>
+<textarea id="names" rows="5" style="width:100%;background:#120E0A;border:1px solid #3D3028;border-radius:10px;padding:10px;color:#FFF8F0;font-size:13px;box-sizing:border-box" placeholder="바오젠 성수&#10;돈골약방 성수&#10;생강김밥 성수"></textarea>
+<button id="btn2" onclick="buildExtra()" style="margin-top:8px;width:100%;background:linear-gradient(135deg,#5DAA68,#7BC88A);border:none;border-radius:12px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer">🔍 이름으로 검색 추가</button>
 </div>
 <div id="r2"></div>
 
-<button id="btn3" onclick="download()" style="margin-top:20px;background:linear-gradient(135deg,#E85D3A,#F2994A);border:none;border-radius:14px;padding:16px 40px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;display:none">💾 Step 3: places.json 다운로드</button>
+<button id="btn3" onclick="download()" style="margin-top:16px;background:linear-gradient(135deg,#E85D3A,#F2994A);border:none;border-radius:14px;padding:16px 40px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;display:none">💾 Step 3: places.json 다운로드</button>
 <div id="r3"></div>
-
 <pre id="log" style="background:#120E0A;border-radius:10px;padding:14px;font-size:11px;color:#6B5744;white-space:pre-wrap;max-width:500px;width:100%;min-height:40px"></pre>
-
 <script>
-var all = {};
-var L = document.getElementById('log');
-function log(t) { L.textContent += t + '\n'; L.scrollTop = L.scrollHeight; }
+var all={};
+var L=document.getElementById('log');
+function log(t){L.textContent+=t+'\n';L.scrollTop=L.scrollHeight;}
+function add(list){var n=0;list.forEach(function(p){if(!all[p.id]){all[p.id]=p;n++;}});return n;}
 
-function add(list) {
-  var n = 0;
-  list.forEach(function(p) { if (!all[p.id]) { all[p.id] = p; n++; } });
-  return n;
-}
-
-async function buildBase() {
-  var btn = document.getElementById('btn1');
-  btn.disabled = true; btn.textContent = '⏳ 구글에서 가져오는 중...'; btn.style.background = '#555';
-  L.textContent = '';
-  log('3개 파트 동시 요청 중 (구글 API)...');
-  try {
-    var r = await Promise.all([
-      fetch('/api/google?part=1').then(function(r){return r.json()}),
-      fetch('/api/google?part=2').then(function(r){return r.json()}),
-      fetch('/api/google?part=3').then(function(r){return r.json()})
-    ]);
-    r.forEach(function(d, i) {
-      log('파트' + (i+1) + ': ' + (d.count||0) + '개' + (d.error ? ' (에러: '+d.error+')' : ''));
-      add(d.places || []);
-    });
-    var t = Object.keys(all).length;
-    log('총: ' + t + '개 (평점/리뷰수 포함)');
-    document.getElementById('r1').innerHTML = '<div style="background:rgba(66,133,244,0.15);border:2px solid #4285F4;border-radius:12px;padding:12px;text-align:center;margin:8px 0"><div style="font-size:28px;font-weight:900;color:#4285F4">' + t + '개</div><div style="font-size:11px;color:#6B5744">구글 데이터 로드 완료 (평점 포함!)</div></div>';
-    btn.textContent = '✅ 완료!'; btn.style.background = '#34A853'; btn.disabled = false;
-    document.getElementById('btn3').style.display = 'block';
-  } catch(e) {
-    log('에러: ' + e.message);
-    btn.textContent = '❌ 에러'; btn.style.background = '#D94F4F'; btn.disabled = false;
+async function buildAll(){
+  var btn=document.getElementById('btn1');
+  btn.disabled=true;btn.textContent='⏳ 빌드 중...';btn.style.background='#555';
+  L.textContent='';
+  var prog=document.getElementById('prog');prog.style.display='block';
+  var bar=document.getElementById('bar');
+  var total=10;
+  for(var i=1;i<=total;i++){
+    var label=['음식점 남서','음식점 중앙','음식점 북동','음식점 북서','카페 남쪽','카페 중앙','카페 북쪽','술집 전체','키워드1','키워드2'];
+    log('파트 '+i+'/'+total+' ('+label[i-1]+') 요청 중...');
+    bar.style.width=((i-1)/total*100)+'%';bar.textContent=Math.round((i-1)/total*100)+'%';
+    try{
+      var r=await fetch('/api/google?part='+i);
+      var d=await r.json();
+      var n=add(d.places||[]);
+      log('  → '+d.count+'개 발견, '+n+'개 신규 추가'+(d.error?' (에러:'+d.error+')':''));
+    }catch(e){log('  → 에러: '+e.message);}
   }
+  bar.style.width='100%';bar.textContent='100%';
+  var t=Object.keys(all).length;
+  log('빌드 완료! 총 '+t+'개 (평점/리뷰수 포함)');
+  document.getElementById('r1').innerHTML='<div style="background:rgba(66,133,244,0.15);border:2px solid #4285F4;border-radius:12px;padding:12px;text-align:center;margin:8px 0"><div style="font-size:28px;font-weight:900;color:#4285F4">'+t+'개</div><div style="font-size:11px;color:#6B5744">구글 데이터 빌드 완료</div></div>';
+  btn.textContent='✅ 완료! 다시 빌드';btn.style.background='#34A853';btn.disabled=false;
+  document.getElementById('btn3').style.display='block';
 }
 
-async function buildExtra() {
-  var names = document.getElementById('names').value.split('\n').map(function(s){return s.trim()}).filter(function(s){return s.length > 0});
-  if (!names.length) { log('가게 이름을 입력하세요'); return; }
-  var btn = document.getElementById('btn2');
-  btn.disabled = true; btn.textContent = '🔍 검색 중...';
-  var added = 0;
-  for (var i = 0; i < names.length; i++) {
-    log('검색: ' + names[i]);
-    try {
-      var r = await fetch('/api/google?part=kw&q=' + encodeURIComponent(names[i]));
-      var d = await r.json();
-      var n = add(d.places || []);
-      log('  → ' + (d.count||0) + '개 발견, ' + n + '개 추가');
-      added += n;
-    } catch(e) { log('  → 에러: ' + e.message); }
+async function buildExtra(){
+  var names=document.getElementById('names').value.split('\n').map(function(s){return s.trim()}).filter(function(s){return s.length>0});
+  if(!names.length){log('가게 이름을 입력하세요');return;}
+  var btn=document.getElementById('btn2');btn.disabled=true;btn.textContent='🔍 검색 중...';
+  var added=0;
+  for(var i=0;i<names.length;i++){
+    log('검색: '+names[i]);
+    try{var r=await fetch('/api/google?part=kw&q='+encodeURIComponent(names[i]));var d=await r.json();var n=add(d.places||[]);log('  → '+d.count+'개 발견, '+n+'개 추가');added+=n;}catch(e){log('  → 에러: '+e.message);}
   }
-  var t = Object.keys(all).length;
-  log('추가 완료! +' + added + '개, 총 ' + t + '개');
-  document.getElementById('r2').innerHTML = '<div style="background:rgba(93,170,104,0.15);border:2px solid #5DAA68;border-radius:12px;padding:12px;text-align:center;margin:8px 0"><div style="font-size:28px;font-weight:900;color:#5DAA68">' + t + '개</div></div>';
-  btn.textContent = '🔍 이름으로 검색 추가'; btn.disabled = false;
+  var t=Object.keys(all).length;
+  log('추가 완료! +'+added+'개, 총 '+t+'개');
+  document.getElementById('r2').innerHTML='<div style="background:rgba(93,170,104,0.15);border:2px solid #5DAA68;border-radius:12px;padding:12px;text-align:center;margin:8px 0"><div style="font-size:28px;font-weight:900;color:#5DAA68">'+t+'개</div></div>';
+  btn.textContent='🔍 이름으로 검색 추가';btn.disabled=false;
+  document.getElementById('btn3').style.display='block';
 }
 
-function download() {
-  var arr = Object.keys(all).map(function(k){return all[k]});
-  var blob = new Blob([JSON.stringify(arr)], {type:'application/json'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a'); a.href = url; a.download = 'places.json';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  document.getElementById('r3').innerHTML = '<div style="color:#5DAA68;font-weight:700;margin:8px 0">✅ ' + arr.length + '개 다운로드! → GitHub public 폴더에 업로드</div>';
+function download(){
+  var arr=Object.keys(all).map(function(k){return all[k]});
+  var blob=new Blob([JSON.stringify(arr)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='places.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  document.getElementById('r3').innerHTML='<div style="color:#5DAA68;font-weight:700;margin:8px 0">✅ '+arr.length+'개 다운로드! → GitHub public에 업로드</div>';
 }
 </script>
 </body>
