@@ -61,7 +61,7 @@ export default function App(){
   const[srchOpen,setSrchOpen]=useState(false);const[srchQ,setSrchQ]=useState("");const[nrRad,setNrRad]=useState(500);const[showDist,setShowDist]=useState(false);const[showFb,setShowFb]=useState(false);const[showFav,setShowFav]=useState(false);const[favCat,setFavCat]=useState("all");const[favPick,setFavPick]=useState(null);const[favSpin,setFavSpin]=useState(false);const[fbName,setFbName]=useState("");const[fbScore,setFbScore]=useState(3);const[fbText,setFbText]=useState("");const[fbPlace,setFbPlace]=useState("");const[fbType,setFbType]=useState("기능개선");
   const[apiPlaces,setApiPlaces]=useState([]);const[apiLoad,setApiLoad]=useState(true);
   const mn=new Date().getMonth()+1;const cm=ym();
-  const AP=useMemo(()=>{const live=apiPlaces.length>0?apiPlaces:D;const base=appMode==="mymap"?cst:[...live,...cst];return base.filter(p=>!hidden.includes(p.id));},[appMode,cst,hidden,apiPlaces]);
+  const AP=useMemo(()=>{const live=apiPlaces;const base=appMode==="mymap"?cst:[...live,...cst];return base.filter(p=>!hidden.includes(p.id));},[appMode,cst,hidden,apiPlaces]);
   const mN=useMemo(()=>AP.filter(p=>p.added===cm),[AP,cm]);
   const sN=useMemo(()=>{const a=[...mN];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,3);},[mN]);
   const sub=useMemo(()=>SB[new Date().getMinutes()%SB.length],[]);
