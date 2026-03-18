@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>데이터 빌더</title></head>
+<body style="font-family:system-ui;background:#1C1410;color:#FFF8F0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;gap:16px">
+<div style="font-size:48px">🍴</div>
+<h1 style="margin:0">먹어버릴지도 데이터 빌더</h1>
+<p style="color:#6B5744;font-size:13px">버튼을 누르면 places.json이 다운로드됩니다</p>
+<button id="btn" onclick="build()" style="margin-top:16px;background:linear-gradient(135deg,#E85D3A,#F2994A);border:none;border-radius:14px;padding:18px 48px;color:#fff;font-size:18px;font-weight:800;cursor:pointer">📥 전체 데이터 다운로드</button>
+<div id="result"></div>
+<pre id="log" style="background:#120E0A;border-radius:10px;padding:14px;font-size:11px;color:#6B5744;white-space:pre-wrap;max-width:500px;width:90%;min-height:40px"></pre>
+<script>
+async function build(){
+var btn=document.getElementById('btn'),log=document.getElementById('log'),result=document.getElementById('result');
+btn.disabled=true;btn.textContent='⏳ 가져오는 중...';btn.style.background='#555';
+log.textContent='3개 파트 동시 요청 중...\n';
+try{
+var r=await Promise.all([fetch('/api/search?part=1').then(function(r){return r.json()}),fetch('/api/search?part=2').then(function(r){return r.json()}),fetch('/api/search?part=3').then(function(r){return r.json()})]);
+var d1=r[0],d2=r[1],d3=r[2];
+log.textContent+='파트1: '+(d1.count||0)+'개\n파트2: '+(d2.count||0)+'개\n파트3: '+(d3.count||0)+'개\n중복 제거 중...\n';
+var seen={},all=[];
+[].concat(d1.places||[],d2.places||[],d3.places||[]).forEach(function(p){if(!seen[p.id]){seen[p.id]=1;all.push(p);}});
+log.textContent+='최종: '+all.length+'개\n다운로드!';
+result.innerHTML='<div style="background:rgba(93,170,104,0.15);border:2px solid #5DAA68;border-radius:12px;padding:16px;text-align:center;margin:8px 0"><div style="font-size:32px;font-weight:900;color:#5DAA68">'+all.length+'개</div><div style="font-size:12px;color:#6B5744">다운로드 완료</div></div>';
+var blob=new Blob([JSON.stringify(all)],{type:'application/json'});
+var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='places.json';document.body.appendChild(a);a.click();document.body.removeChild(a);
+btn.textContent='✅ 완료! 다시 다운로드';btn.style.background='#5DAA68';btn.disabled=false;
+}catch(e){log.textContent+='에러: '+e.message;btn.textContent='❌ 에러 - 다시 시도';btn.style.background='#D94F4F';btn.disabled=false;}}
+</script>
+</body>
+</html>
