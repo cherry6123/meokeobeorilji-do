@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  async function fetchAll(code, lat, lng, rad) {
+  async function fetchCat(code, lat, lng, rad) {
     const docs = [];
     for (let p = 1; p <= 45; p++) {
       const r = await fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&y=${lat}&x=${lng}&radius=${rad}&size=15&page=${p}&sort=distance`,
@@ -54,33 +54,48 @@ module.exports = async function handler(req, res) {
     return docs;
   }
 
+  async function fetchKw(kw) {
+    const docs = [];
+    for (let p = 1; p <= 5; p++) {
+      const r = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(kw)}&y=37.5445&x=127.0560&radius=3000&size=15&page=${p}&sort=accuracy`,
+        { headers: { 'Authorization': `KakaoAK ${KAKAO_KEY}` } });
+      if (!r.ok) break;
+      const d = await r.json();
+      if (!d.documents || !d.documents.length) break;
+      d.documents.forEach(doc => docs.push(doc));
+      if (d.meta && d.meta.is_end) break;
+    }
+    return docs;
+  }
+
   try {
     const zones = [
-      [37.5390, 127.0440, 800],
-      [37.5390, 127.0520, 800],
-      [37.5390, 127.0600, 800],
-      [37.5390, 127.0680, 800],
-      [37.5430, 127.0440, 800],
-      [37.5430, 127.0520, 800],
-      [37.5430, 127.0600, 800],
-      [37.5430, 127.0680, 800],
-      [37.5470, 127.0440, 800],
-      [37.5470, 127.0520, 800],
-      [37.5470, 127.0600, 800],
-      [37.5470, 127.0680, 800],
-      [37.5510, 127.0440, 800],
-      [37.5510, 127.0520, 800],
-      [37.5510, 127.0600, 800],
-      [37.5510, 127.0680, 800],
+      [37.5390, 127.0440, 500],[37.5390, 127.0500, 500],[37.5390, 127.0560, 500],[37.5390, 127.0620, 500],[37.5390, 127.0680, 500],
+      [37.5420, 127.0440, 500],[37.5420, 127.0500, 500],[37.5420, 127.0560, 500],[37.5420, 127.0620, 500],[37.5420, 127.0680, 500],
+      [37.5450, 127.0440, 500],[37.5450, 127.0500, 500],[37.5450, 127.0560, 500],[37.5450, 127.0620, 500],[37.5450, 127.0680, 500],
+      [37.5480, 127.0440, 500],[37.5480, 127.0500, 500],[37.5480, 127.0560, 500],[37.5480, 127.0620, 500],[37.5480, 127.0680, 500],
+      [37.5510, 127.0440, 500],[37.5510, 127.0500, 500],[37.5510, 127.0560, 500],[37.5510, 127.0620, 500],[37.5510, 127.0680, 500],
     ];
 
-    const jobs = [];
+    const catJobs = [];
     for (const [lat, lng, rad] of zones) {
-      jobs.push(fetchAll('FD6', lat, lng, rad));
-      jobs.push(fetchAll('CE7', lat, lng, rad));
+      catJobs.push(fetchCat('FD6', lat, lng, rad));
+      catJobs.push(fetchCat('CE7', lat, lng, rad));
     }
 
-    const allResults = await Promise.all(jobs);
+    const keywords = [
+      '성수동 맛집','성수동 음식점','성수동 카페','성수동 술집','성수동 베이커리',
+      '성수동 브런치','성수동 파스타','성수동 라멘','성수동 고기','성수동 삼겹살',
+      '성수동 치킨','성수동 피자','성수동 돈까스','성수동 국밥','성수동 냉면',
+      '성수동 도넛','성수동 디저트','성수동 와인바','성수동 이자카야','성수동 샌드위치',
+      '성수동2가 맛집','성수동1가 맛집','성수동2가 카페','성수동1가 카페',
+      '뚝섬역 맛집','뚝섬역 카페','성수역 맛집','성수역 카페',
+      '서울숲 맛집','서울숲 카페','서울숲 브런치','서울숲 디저트',
+    ];
+
+    const kwJobs = keywords.map(kw => fetchKw(kw));
+
+    const allResults = await Promise.all([...catJobs, ...kwJobs]);
     allResults.forEach(docs => docs.forEach(parse));
 
     res.status(200).json({ places: results, count: results.length });
