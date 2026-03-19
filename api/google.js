@@ -24,7 +24,8 @@ module.exports = async function handler(req, res) {
     else if (types.includes('mexican_restaurant')) g = '멕시칸';
     else if (types.includes('thai_restaurant') || types.includes('vietnamese_restaurant') || types.includes('indonesian_restaurant')) g = '동남아';
     else if (types.includes('restaurant') || types.includes('meal_delivery') || types.includes('meal_takeaway')) g = '한식';
-    const name = p.displayName ? p.displayName.text : '';
+    var rawName = p.displayName ? p.displayName.text : '';
+const name = /[가-힣]/.test(rawName) ? rawName.replace(/\s*\([A-Za-z\s]+\)\s*/g,'').replace(/\s*[A-Za-z]{2,}.*$/,'').trim() || rawName : rawName;
     const addr = (p.formattedAddress || '').replace('대한민국 ', '').replace('서울특별시 성동구 ', '').replace('서울 성동구 ', '');
     results.push({
       id: 'g' + p.id, nk: name, g, sg: (p.primaryType || '').replace(/_/g, ' '),
