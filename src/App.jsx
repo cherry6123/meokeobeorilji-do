@@ -103,6 +103,7 @@ export default function App(){
         <p style={{fontSize:11,color:DM,margin:"5px 0 0",lineHeight:1.4}}>{p.ds}</p>
       </div>
     </div>);};
+ if(apiLoad)return(<div style={{fontFamily:"system-ui,sans-serif",background:"#0E0A06",color:"#FFF8F0",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}><div style={{fontSize:48,animation:"pulse .8s infinite"}}>{"🍴"}</div><p style={{fontSize:14,fontWeight:700,marginTop:12}}>{"맛집 불러오는 중..."}</p></div>);
   return(
     <div style={{fontFamily:"system-ui,sans-serif",background:"linear-gradient(180deg,#0E0A06,"+BG+" 30%,#120E0A)",color:CR,minHeight:"100vh",maxWidth:480,margin:"0 auto"}}>
       <style>{"@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@keyframes glow{0%,100%{opacity:.6}50%{opacity:1}}*{box-sizing:border-box}body{margin:0;background:#0E0A06}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#3D3028;border-radius:3px}"}</style>
